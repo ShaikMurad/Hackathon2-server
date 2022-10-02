@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import mongodb from "mongodb";
 import { MongoClient } from "mongodb";
-
+const PORT = process.env.PORT;
 const URL = process.env.DB;
 const app = express();
 // MidleWare
@@ -192,6 +192,6 @@ app.post("/login", async (req, res) => {
   }
 });
 
-app.listen(process.env.PORT || 8000, () => {
-  console.log("server listening on port 8000");
+app.listen(PORT, () => {
+  console.log(`server listening on Port ${PORT}`);
 });
