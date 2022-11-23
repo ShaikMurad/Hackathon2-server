@@ -117,15 +117,66 @@ app.delete("/Equipment/:id", async (req, res) => {
 //create Order history
 app.post("/order", async (req, res) => {
   try {
-    console.log(req.body);
+    let kar = req.body;
     let response = await client
       .db("EqupDB")
       .collection("Orders")
       .insertOne(req.body);
-    res.json(response);
+    const priceCalculator = (price, rent, period, quantity) => {
+      if (period === "Days") {
+        let x = parseInt(rent);
+        let x1 = x * 24;
+        let y = parseInt(price);
+        let xy = x1 * y;
+        let xy1 = parseInt(quantity) * xy;
+        return xy1;
+      } else if (period === "Months") {
+        let x = parseInt(rent);
+        let y = parseInt(price);
+        let x1 = x * 24 * 30;
+        let xy = x1 * y;
+        let xy1 = parseInt(quantity) * xy;
+        return xy1;
+      } else if (period === "Years") {
+        let x = parseInt(rent);
+        let y = parseInt(price);
+        let x1 = x * 24 * 30 * 12;
+        let xy = x1 * y;
+        let xy1 = parseInt(quantity) * xy;
+        return xy1;
+      }
+    };
+    let price = priceCalculator(
+      kar.Price,
+      kar.Rental,
+      kar.Period,
+      kar.Quantity
+    );
+
+    let User = await client
+      .db("EqupDB")
+      .collection("Orders")
+      .findOneAndUpdate({ _id: kar._id }, { $set: { TotalPrice: price } });
+    let resUser = await client
+      .db("EqupDB")
+      .collection("Orders")
+      .find()
+      .toArray();
+    res.json(resUser);
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: err });
+  }
+});
+
+// Delete Order
+app.delete("/temp", async (req, res) => {
+  try {
+    let User = await client.db("EqupDB").collection("Orders").deleteMany({});
+    res.status(200).json(User);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Something went wrong" });
   }
 });
 
@@ -134,7 +185,7 @@ app.get("/orders", async (req, res) => {
   try {
     let resUser = await client
       .db("EqupDB")
-      .collection("Orders")
+      .collection("final")
       .find()
       .toArray();
     res.json(resUser);
@@ -166,20 +217,23 @@ app.post("/login", async (req, res) => {
       .db("EqupDB")
       .collection("user")
       .findOne({ email: req.body.email });
-    console.log(user.password);
+    console.log(user);
     // Login logic
     if (user) {
       let compare = await bcrypt.compare(req.body.password, user.password);
       if (compare) {
-        let token = jwt.sign({ _id: user._id }, process.env.SECRET, {
-          expiresIn: "30m",
-        });
-        let userValues = {
-          name: user.Name,
-          token: token,
-        };
-        res.json({ userValues });
-        // res.json({ message: "logged in successfully" });
+        if (user.AdminKey === req.body.AdminKey) {
+          let token = jwt.sign({ _id: user._id }, process.env.SECRET, {
+            expiresIn: "30m",
+          });
+          let userValues = {
+            name: user.Name,
+            token: token,
+          };
+          res.json({ userValues });
+        } else {
+          res.status(401).json({ message: "Admin not found" });
+        }
       } else {
         res.json({ message: "password is wrong" });
       }
@@ -188,6 +242,33 @@ app.post("/login", async (req, res) => {
     }
   } catch (err) {
     console.log(err);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+});
+
+app.post("/final", async (req, res) => {
+  try {
+    let response = await client
+      .db("EqupDB")
+      .collection("final")
+      .insertOne(req.body);
+    res.status(200).send();
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: err });
+  }
+});
+
+// get orders
+app.get("/finals", async (req, res) => {
+  try {
+    let resUser = await client
+      .db("EqupDB")
+      .collection("final")
+      .find()
+      .toArray();
+    res.json(resUser);
+  } catch (err) {
     res.status(500).json({ message: "Something went wrong" });
   }
 });
